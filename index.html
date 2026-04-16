@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <title>JackFlix</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ── BROWSE ────────────────────────────────────────────────────────────── -->
+  <div id="browse">
+
+    <!-- Hero -->
+    <div class="hero" id="hero">
+      <div class="hero-bg" id="heroBg"></div>
+      <div class="hero-vignette"></div>
+      <div class="hero-info" id="heroInfo">
+        <div class="hero-title" id="heroTitle"></div>
+        <div class="hero-meta"  id="heroMeta"></div>
+        <div class="hero-overview" id="heroOverview"></div>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="nav" id="nav">
+      <span class="nav-logo">JACKFLIX</span>
+      <div class="nav-tabs">
+        <button class="nav-tab active" data-filter="all">Home</button>
+        <button class="nav-tab" data-filter="movie">Movies</button>
+        <button class="nav-tab" data-filter="tv">TV Shows</button>
+      </div>
+    </nav>
+
+    <!-- Rows -->
+    <div class="rows" id="rows"></div>
+
+  </div>
+
+  <!-- ── DETAIL OVERLAY ────────────────────────────────────────────────────── -->
+  <div class="detail hidden" id="detail">
+    <div class="detail-bg" id="detailBg"></div>
+    <div class="detail-vignette"></div>
+    <div class="detail-content">
+      <div class="detail-title"    id="detailTitle"></div>
+      <div class="detail-meta"     id="detailMeta"></div>
+      <div class="detail-overview" id="detailOverview"></div>
+      <div class="detail-actions"  id="detailActions"></div>
+      <!-- TV season/episode picker -->
+      <div class="ep-picker hidden" id="epPicker">
+        <div class="ep-season-row"  id="epSeasonRow"></div>
+        <div class="ep-list"        id="epList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PLAYER ────────────────────────────────────────────────────────────── -->
+  <div class="player hidden" id="player">
+
+    <!-- Hidden extraction iframe -->
+    <!-- created dynamically by player.js -->
+
+    <!-- Native video -->
+    <video id="vid" preload="auto" playsinline></video>
+
+    <!-- Loading overlay -->
+    <div class="player-loading" id="playerLoading">
+      <div class="spinner"></div>
+      <div class="player-loading-msg" id="playerLoadingMsg">Finding stream…</div>
+    </div>
+
+    <!-- Controls overlay -->
+    <div class="player-controls" id="playerControls">
+      <div class="pc-top">
+        <div class="pc-title" id="pcTitle"></div>
+        <div class="pc-server">
+          <span class="pc-srv-label">Source</span>
+          <div id="pcSrvBtns">
+            <button class="pc-srv-btn active" data-s="0">1</button>
+            <button class="pc-srv-btn" data-s="1">2</button>
+          </div>
+        </div>
+      </div>
+      <div class="pc-bottom">
+        <div class="pc-seek-wrap">
+          <div class="pc-seek-track" id="pcSeekTrack">
+            <div class="pc-seek-fill" id="pcSeekFill"></div>
+          </div>
+        </div>
+        <div class="pc-row">
+          <span class="pc-time" id="pcTime">0:00 / 0:00</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
+  <script src="player.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

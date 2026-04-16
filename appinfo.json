@@ -1,0 +1,14 @@
+{
+  "id": "com.jackflix.tv",
+  "version": "1.0.0",
+  "vendor": "Jack Herman",
+  "type": "web",
+  "main": "index.html",
+  "title": "JackFlix",
+  "icon": "icon.png",
+  "largeIcon": "icon.png",
+  "iconColor": "#141414",
+  "splashBackground": "#141414",
+  "resolution": "1920x1080",
+  "useNativeScroll": false
+}
