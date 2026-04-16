@@ -8,6 +8,50 @@
 </head>
 <body>
 
+  <!-- ── PROFILE SCREEN ───────────────────────────────────────────────────── -->
+  <div id="profileScreen" class="profile-screen">
+    <div class="profile-screen-logo">JACKFLIX</div>
+
+    <!-- Who's watching picker -->
+    <div id="profilePicker" class="profile-picker-tv">
+      <h1 class="profile-heading-tv">Who's watching?</h1>
+      <div id="profileCards" class="profile-cards-tv"></div>
+      <div class="profile-manage-row">
+        <button id="manageBtn" class="profile-manage-btn">Manage Profiles</button>
+      </div>
+    </div>
+
+    <!-- PIN entry (D-pad-friendly keypad) -->
+    <div id="pinScreen" class="pin-screen-tv hidden">
+      <p id="pinFor" class="pin-for-tv"></p>
+      <div class="pin-dots-tv" id="pinDots">
+        <div class="pin-dot-tv"></div>
+        <div class="pin-dot-tv"></div>
+        <div class="pin-dot-tv"></div>
+        <div class="pin-dot-tv"></div>
+      </div>
+      <p id="pinError" class="pin-error-tv hidden">Incorrect PIN</p>
+      <div id="pinKeypad" class="pin-keypad-tv"></div>
+      <button id="pinBack" class="pin-back-tv">← Back</button>
+    </div>
+
+    <!-- Create profile -->
+    <div id="createProfileScreen" class="create-profile-screen hidden">
+      <h1 class="profile-heading-tv">New Profile</h1>
+      <div class="create-form-tv">
+        <div class="create-field-label">Name</div>
+        <div id="nameDisplay" class="name-display-tv">_</div>
+        <div id="nameKeyboard" class="name-keyboard-tv"></div>
+        <div class="create-field-label" style="margin-top:40px">Colour</div>
+        <div id="avatarPickerTv" class="avatar-picker-tv"></div>
+        <div class="create-actions-tv">
+          <button id="createCancelBtn" class="create-action-btn create-action-cancel">Cancel</button>
+          <button id="createSaveBtn"   class="create-action-btn create-action-save">Create</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── BROWSE ────────────────────────────────────────────────────────────── -->
   <div id="browse">
 

@@ -6,12 +6,89 @@ const PROXY_BASE  = 'https://jackflix-proxy.jackrherman.workers.dev'
 const TMDB_TOKEN  = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI4MjVlMzYzYTM3MDRhZDk5MTZlOTE4NzI3OWJjNjRkYyIsIm5iZiI6MTc3NjI4OTMwMC44MzgsInN1YiI6IjY5ZTAwNjE0OWMzOWYzNTRmODAxMmM0MCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.NSmPuuHTY8KGU4GTN4hz8_PVe9bxnXxmlfi5Ce5Co8A'
 const IMG         = 'https://image.tmdb.org/t/p'
 
+// ── SERVER TOKEN (set after login) ────────────────────────────────────────────
+
+var serverToken = localStorage.getItem('jf_tv_token') || null
+
 // ── TMDB HELPER ───────────────────────────────────────────────────────────────
 
-function tmdb(ep, p = {}) {
-  const url = new URL(`https://api.themoviedb.org/3${ep}`)
-  Object.entries(p).forEach(([k, v]) => url.searchParams.set(k, v))
-  return fetch(url, { headers: { Authorization: `Bearer ${TMDB_TOKEN}` } }).then(r => r.json())
+function tmdb(ep, p) {
+  p = p || {}
+  var url = new URL('https://api.themoviedb.org/3' + ep)
+  Object.keys(p).forEach(function(k) { url.searchParams.set(k, p[k]) })
+  return fetch(url.toString(), { headers: { Authorization: 'Bearer ' + TMDB_TOKEN } }).then(function(r) { return r.json() })
+}
+
+// ── CONTINUE WATCHING ─────────────────────────────────────────────────────────
+
+var CW_KEY = 'jf_tv_cw'
+
+function cwKey(p) {
+  return p.type === 'movie' ? 'm_' + p.tmdbId : 't_' + p.tmdbId + '_' + p.season + '_' + p.episode
+}
+
+function cwAll() {
+  try { return JSON.parse(localStorage.getItem(CW_KEY) || '{}') } catch(_) { return {} }
+}
+
+function cwGet(p) { return cwAll()[cwKey(p)] || null }
+
+function cwRecent() {
+  return Object.values(cwAll())
+    .filter(function(e) { return e.pct > 0.02 && e.pct < 0.95 })
+    .sort(function(a, b) { return b.ts - a.ts })
+    .slice(0, 20)
+}
+
+function cwSave() {
+  var v = vid()
+  if (!currentItem || !v.duration || v.duration < 60) return
+  var pct = v.currentTime / v.duration
+  if (pct < 0.02 || pct > 0.95) return
+  var store = cwAll()
+  store[cwKey(currentItem)] = {
+    tmdbId:     currentItem.tmdbId,
+    type:       currentItem.type,
+    title:      currentItem.title,
+    posterPath: currentItem.posterPath || null,
+    season:     currentItem.season,
+    episode:    currentItem.episode,
+    position:   v.currentTime,
+    duration:   v.duration,
+    pct:        pct,
+    ts:         Date.now(),
+  }
+  var entries = Object.entries(store).sort(function(a,b) { return b[1].ts - a[1].ts })
+  localStorage.setItem(CW_KEY, JSON.stringify(Object.fromEntries(entries.slice(0, 50))))
+  syncCW()
+}
+
+function syncCW() {
+  if (!serverToken) return
+  fetch(PROXY_BASE + '/api/cw', {
+    method:  'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + serverToken },
+    body:    JSON.stringify(cwAll()),
+  }).then(function(r) {
+    if (r.status === 401) { serverToken = null; localStorage.removeItem('jf_tv_token') }
+  }).catch(function() {})
+}
+
+function loadCWFromServer() {
+  if (!serverToken) return Promise.resolve()
+  return fetch(PROXY_BASE + '/api/cw', {
+    headers: { 'Authorization': 'Bearer ' + serverToken },
+  }).then(function(r) {
+    if (!r.ok) return
+    return r.json().then(function(serverCW) {
+      var local  = cwAll()
+      var merged = Object.assign({}, local)
+      Object.keys(serverCW).forEach(function(k) {
+        if (!merged[k] || (serverCW[k].ts || 0) > (merged[k].ts || 0)) merged[k] = serverCW[k]
+      })
+      localStorage.setItem(CW_KEY, JSON.stringify(merged))
+    })
+  }).catch(function() {})
 }
 
 // ── PLAYER STATE ──────────────────────────────────────────────────────────────
@@ -22,25 +99,37 @@ let hlsInstance    = null
 let controlsTimer  = null
 let serverIndex    = 0
 
-const vid = () => document.getElementById('vid')
+function vid() { return document.getElementById('vid') }
 
 // ── OPEN PLAYER ───────────────────────────────────────────────────────────────
 
 function openPlayer(item) {
   currentItem  = item
   serverIndex  = 0
-  const el     = document.getElementById('player')
+
+  // Check saved position if not explicitly provided
+  if (item.resumeFrom === undefined || item.resumeFrom === null) {
+    var saved = cwGet(item)
+    if (saved && saved.pct > 0.02 && saved.pct < 0.95) {
+      currentItem.resumeFrom = saved.position
+    }
+  }
+
+  var el = document.getElementById('player')
   el.classList.remove('hidden')
   document.getElementById('browse').style.visibility = 'hidden'
   document.getElementById('detail').classList.add('hidden')
-  showPlayerLoading('Finding stream…')
+  document.getElementById('pcTitle').textContent = item.title || ''
+  showPlayerLoading('Finding stream\u2026')
   tryServer(0)
 }
 
 function closePlayer() {
+  cwSave()  // save position before closing
+  if (_cwTimer) { clearInterval(_cwTimer); _cwTimer = null }
   stopExtraction()
   if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null }
-  const v = vid()
+  var v = vid()
   v.pause(); v.src = ''
   document.getElementById('player').classList.add('hidden')
   document.getElementById('browse').style.visibility = 'visible'
@@ -104,7 +193,7 @@ async function tryServer(idx) {
   iframe.style.cssText = 'position:fixed;width:800px;height:450px;top:-9999px;left:-9999px;opacity:0;pointer-events:none;'
   document.body.appendChild(iframe)
 
-  const timeout = setTimeout(() => {
+  var timeout = setTimeout(function() {
     if (extractionId !== myId) return
     stopExtraction()
     window.removeEventListener('message', handler)
@@ -113,7 +202,7 @@ async function tryServer(idx) {
     } else {
       showPlayerLoading('No stream found. Press Back.')
     }
-  }, 45_000)
+  }, 45000)
 
   function handler(e) {
     if (extractionId !== myId) return
@@ -128,7 +217,7 @@ async function tryServer(idx) {
   }
 
   window.addEventListener('message', handler)
-  _extractCleanup = () => {
+  _extractCleanup = function() {
     clearTimeout(timeout)
     window.removeEventListener('message', handler)
   }
@@ -136,24 +225,34 @@ async function tryServer(idx) {
 
 // ── PLAYBACK ──────────────────────────────────────────────────────────────────
 
+var _cwTimer = null
+
 function startPlayback(streamUrl) {
-  const v = vid()
+  var v = vid()
   if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null }
+  if (_cwTimer) { clearInterval(_cwTimer); _cwTimer = null }
   hidePlayerLoading()
   showPlayerControls()
+
+  function onReady() {
+    if (currentItem && currentItem.resumeFrom > 0) {
+      v.currentTime = currentItem.resumeFrom
+    }
+    v.play()
+    _cwTimer = setInterval(cwSave, 15000)
+  }
 
   if (Hls.isSupported()) {
     hlsInstance = new Hls({ enableWorker: true })
     hlsInstance.loadSource(streamUrl)
     hlsInstance.attachMedia(v)
-    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => { v.play() })
-    hlsInstance.on(Hls.Events.ERROR, (_, d) => {
+    hlsInstance.on(Hls.Events.MANIFEST_PARSED, onReady)
+    hlsInstance.on(Hls.Events.ERROR, function(_, d) {
       if (d.fatal) showPlayerLoading('Playback error. Try another source.')
     })
   } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-    // Native HLS (webOS)
     v.src = streamUrl
-    v.play()
+    v.addEventListener('loadedmetadata', onReady, { once: true })
   } else {
     showPlayerLoading('HLS not supported.')
     return
@@ -209,8 +308,9 @@ function resetControlsTimer() {
 }
 
 function syncServerBtns() {
-  document.querySelectorAll('.pc-srv-btn').forEach((b, i) =>
-    b.classList.toggle('active', i === serverIndex))
+  document.querySelectorAll('.pc-srv-btn').forEach(function(b, i) {
+    b.classList.toggle('active', i === serverIndex)
+  })
 }
 
 // ── PLAYER REMOTE CONTROL ─────────────────────────────────────────────────────
@@ -260,7 +360,7 @@ function handlePlayerKey(e) {
 }
 
 // WebOS back key codes
-window.addEventListener('keydown', e => {
+window.addEventListener('keydown', function(e) {
   if (document.getElementById('player').classList.contains('hidden')) return
   if (e.keyCode === 461) { closePlayer(); e.preventDefault() }
 })
@@ -268,15 +368,13 @@ window.addEventListener('keydown', e => {
 // ── SETUP ─────────────────────────────────────────────────────────────────────
 
 function setupPlayer() {
-  // player title from currentItem
-  document.getElementById('player').addEventListener('keydown', e => {
+  document.getElementById('player').addEventListener('keydown', function(e) {
     handlePlayerKey(e)
   })
 
-  // source switch buttons
-  document.querySelectorAll('.pc-srv-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const idx = +btn.dataset.s
+  document.querySelectorAll('.pc-srv-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var idx = +btn.dataset.s
       if (currentItem) tryServer(idx)
     })
   })

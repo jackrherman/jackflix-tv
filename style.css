@@ -350,3 +350,158 @@ html, body {
 
 .pc-row { display: flex; align-items: center }
 .pc-time { font-size: 26px; color: #ddd }
+
+/* ── PROFILE SCREEN ──────────────────────────────────────────────────────────── */
+.profile-screen {
+  position: absolute; inset: 0;
+  background: #141414;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 50;
+}
+.profile-screen.hidden { display: none !important }
+
+.profile-screen-logo {
+  position: absolute; top: 48px; left: 80px;
+  font-size: 52px; font-weight: 900;
+  color: #e50914; letter-spacing: 4px;
+}
+
+.profile-picker-tv { display: flex; flex-direction: column; align-items: center }
+.profile-heading-tv {
+  font-size: 48px; font-weight: 700; color: #fff;
+  margin-bottom: 64px; text-align: center;
+}
+
+.profile-cards-tv {
+  display: flex; gap: 48px; flex-wrap: wrap; justify-content: center;
+  max-width: 1600px;
+}
+
+.profile-card-tv {
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+  cursor: pointer; padding: 24px; border-radius: 10px;
+  border: 3px solid transparent;
+  transition: border-color .15s, transform .15s;
+  position: relative;
+}
+.profile-card-tv.focused { border-color: #fff; transform: scale(1.08) }
+.profile-card-tv.delete-mode.focused { border-color: #e50914 }
+
+.profile-avatar-tv {
+  width: 140px; height: 140px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 72px; font-weight: 900; color: #fff;
+}
+.profile-avatar-tv.add-avatar {
+  background: rgba(255,255,255,0.1);
+  border: 4px dashed rgba(255,255,255,0.3);
+  font-size: 60px; color: rgba(255,255,255,0.4);
+}
+
+.profile-name-tv {
+  font-size: 28px; font-weight: 600; color: #e5e5e5;
+  text-align: center;
+}
+
+.profile-delete-badge {
+  position: absolute; top: -8px; right: -8px;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: #e50914; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700;
+}
+
+.profile-manage-row { margin-top: 60px }
+.profile-manage-btn {
+  background: none; border: 2px solid rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.6); font-size: 26px;
+  padding: 14px 48px; border-radius: 6px; cursor: pointer;
+  outline: none;
+}
+.profile-manage-btn:focus { border-color: #fff; color: #fff }
+
+/* PIN screen (TV) */
+.pin-screen-tv {
+  display: flex; flex-direction: column; align-items: center; gap: 32px;
+}
+.pin-for-tv { font-size: 36px; color: #fff; font-weight: 600; }
+.pin-dots-tv { display: flex; gap: 28px; }
+.pin-dot-tv {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,.35);
+  transition: all .15s;
+}
+.pin-dot-tv.filled { background: #e50914; border-color: #e50914; }
+.pin-error-tv { font-size: 28px; color: #f87171; }
+.pin-keypad-tv {
+  display: grid; grid-template-columns: repeat(3, 120px); gap: 16px;
+}
+.pin-key-tv {
+  height: 90px; border: 2px solid rgba(255,255,255,.2);
+  border-radius: 8px; background: rgba(255,255,255,.1);
+  color: #fff; font-size: 34px; font-weight: 600;
+  cursor: pointer; outline: none;
+  transition: transform .1s, background .1s;
+}
+.pin-key-tv:focus { background: rgba(255,255,255,.25); transform: scale(1.08) }
+.pin-key-tv.active { background: #e50914; border-color: #e50914 }
+.pin-back-tv {
+  background: none; border: none; color: rgba(255,255,255,.5);
+  font-size: 28px; cursor: pointer; outline: none; padding: 12px 32px;
+}
+.pin-back-tv:focus { color: #fff }
+
+/* Create profile (TV) */
+.create-profile-screen {
+  display: flex; flex-direction: column; align-items: center;
+}
+.create-form-tv { display: flex; flex-direction: column; gap: 16px; width: 900px; }
+.create-field-label { font-size: 26px; color: rgba(255,255,255,.6); }
+.name-display-tv {
+  font-size: 48px; font-weight: 700; color: #fff;
+  background: rgba(255,255,255,.08); border-radius: 8px;
+  padding: 16px 24px; min-height: 80px; letter-spacing: 2px;
+}
+.name-keyboard-tv {
+  display: flex; flex-wrap: wrap; gap: 8px; max-width: 900px;
+}
+.kb-key {
+  width: 68px; height: 68px; border-radius: 6px;
+  background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.15);
+  color: #fff; font-size: 28px; font-weight: 600;
+  cursor: pointer; outline: none;
+  transition: transform .1s, background .1s;
+}
+.kb-key:focus { background: rgba(255,255,255,.25); transform: scale(1.1) }
+.kb-key-wide { width: 148px; font-size: 22px; }
+.avatar-picker-tv { display: flex; gap: 24px; }
+.avatar-swatch-tv {
+  width: 80px; height: 80px; border-radius: 12px;
+  border: 4px solid transparent; cursor: pointer; outline: none;
+  transition: transform .1s, border-color .1s;
+}
+.avatar-swatch-tv:focus { transform: scale(1.15); }
+.avatar-swatch-tv.selected { border-color: #fff; transform: scale(1.15); }
+.create-actions-tv { display: flex; gap: 24px; margin-top: 16px; }
+.create-action-btn {
+  padding: 20px 60px; font-size: 28px; font-weight: 700;
+  border: none; border-radius: 8px; cursor: pointer; outline: none;
+  transition: transform .1s;
+}
+.create-action-btn:focus { transform: scale(1.06) }
+.create-action-cancel { background: rgba(255,255,255,.15); color: #fff; border: 2px solid rgba(255,255,255,.3) }
+.create-action-save   { background: #e50914; color: #fff }
+
+/* ── CONTINUE WATCHING PROGRESS BAR ─────────────────────────────────────────── */
+.cw-bar {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 4px;
+  background: rgba(255,255,255,.25);
+}
+.cw-bar-fill { height: 100%; background: #e50914; }
+.card { position: relative; }
+.card-ep-label {
+  position: absolute; top: 6px; left: 6px;
+  background: rgba(0,0,0,.7); color: #fff;
+  font-size: 14px; padding: 2px 8px; border-radius: 4px;
+}
