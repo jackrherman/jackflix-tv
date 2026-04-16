@@ -21,10 +21,10 @@
       </div>
     </div>
 
-    <!-- PIN entry (D-pad-friendly keypad) -->
+    <!-- PIN entry -->
     <div id="pinScreen" class="pin-screen-tv hidden">
       <p id="pinFor" class="pin-for-tv"></p>
-      <div class="pin-dots-tv" id="pinDots">
+      <div class="pin-dots-tv">
         <div class="pin-dot-tv"></div>
         <div class="pin-dot-tv"></div>
         <div class="pin-dot-tv"></div>
@@ -32,109 +32,166 @@
       </div>
       <p id="pinError" class="pin-error-tv hidden">Incorrect PIN</p>
       <div id="pinKeypad" class="pin-keypad-tv"></div>
-      <button id="pinBack" class="pin-back-tv">← Back</button>
-    </div>
-
-    <!-- Create profile -->
-    <div id="createProfileScreen" class="create-profile-screen hidden">
-      <h1 class="profile-heading-tv">New Profile</h1>
-      <div class="create-form-tv">
-        <div class="create-field-label">Name</div>
-        <div id="nameDisplay" class="name-display-tv">_</div>
-        <div id="nameKeyboard" class="name-keyboard-tv"></div>
-        <div class="create-field-label" style="margin-top:40px">Colour</div>
-        <div id="avatarPickerTv" class="avatar-picker-tv"></div>
-        <div class="create-actions-tv">
-          <button id="createCancelBtn" class="create-action-btn create-action-cancel">Cancel</button>
-          <button id="createSaveBtn"   class="create-action-btn create-action-save">Create</button>
-        </div>
-      </div>
     </div>
   </div>
 
   <!-- ── BROWSE ────────────────────────────────────────────────────────────── -->
-  <div id="browse">
+  <div id="browse" style="visibility:hidden">
 
     <!-- Hero -->
-    <div class="hero" id="hero">
-      <div class="hero-bg" id="heroBg"></div>
+    <div class="hero">
+      <div class="hero-backdrop" id="heroBg"></div>
       <div class="hero-vignette"></div>
-      <div class="hero-info" id="heroInfo">
-        <div class="hero-title" id="heroTitle"></div>
-        <div class="hero-meta"  id="heroMeta"></div>
+      <div class="hero-content">
+        <div class="hero-badge">JACKFLIX</div>
+        <div class="hero-title"    id="heroTitle"></div>
         <div class="hero-overview" id="heroOverview"></div>
+        <div class="hero-meta"     id="heroMeta"></div>
       </div>
     </div>
 
     <!-- Nav -->
     <nav class="nav" id="nav">
       <span class="nav-logo">JACKFLIX</span>
-      <div class="nav-tabs">
-        <button class="nav-tab active" data-filter="all">Home</button>
-        <button class="nav-tab" data-filter="movie">Movies</button>
-        <button class="nav-tab" data-filter="tv">TV Shows</button>
-      </div>
+      <ul class="nav-links">
+        <li class="nav-link active" data-filter="all">Home</li>
+        <li class="nav-link" data-filter="movie">Movies</li>
+        <li class="nav-link" data-filter="tv">TV Shows</li>
+      </ul>
     </nav>
 
-    <!-- Rows -->
-    <div class="rows" id="rows"></div>
+    <!-- Content rows -->
+    <div class="content" id="content">
+      <div id="rows"></div>
+    </div>
 
   </div>
 
-  <!-- ── DETAIL OVERLAY ────────────────────────────────────────────────────── -->
-  <div class="detail hidden" id="detail">
-    <div class="detail-bg" id="detailBg"></div>
-    <div class="detail-vignette"></div>
-    <div class="detail-content">
-      <div class="detail-title"    id="detailTitle"></div>
-      <div class="detail-meta"     id="detailMeta"></div>
-      <div class="detail-overview" id="detailOverview"></div>
-      <div class="detail-actions"  id="detailActions"></div>
-      <!-- TV season/episode picker -->
-      <div class="ep-picker hidden" id="epPicker">
-        <div class="ep-season-row"  id="epSeasonRow"></div>
-        <div class="ep-list"        id="epList"></div>
+  <!-- ── MODAL OVERLAY ─────────────────────────────────────────────────────── -->
+  <div class="modal-overlay hidden" id="modalOverlay">
+    <div class="modal" id="modal">
+      <button class="modal-close" id="modalClose">&#10005;</button>
+
+      <div class="modal-hero">
+        <img class="modal-backdrop" id="modalBackdrop" src="" alt="">
+        <div class="modal-hero-vignette"></div>
+        <div class="modal-hero-info">
+          <div class="modal-title" id="modalTitle"></div>
+          <div class="modal-actions" id="modalActions"></div>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-meta" id="modalMeta"></div>
+        <div class="modal-cols">
+          <div>
+            <div class="modal-overview" id="modalOverview"></div>
+
+            <!-- TV episodes section -->
+            <div class="episodes-section hidden" id="episodesSection">
+              <div class="episodes-header">
+                <div class="episodes-heading">Episodes</div>
+                <select class="season-select" id="seasonSelect"></select>
+              </div>
+              <div class="episode-list" id="episodeList"></div>
+            </div>
+          </div>
+          <div class="modal-col-side" id="modalSide"></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- ── PLAYER ────────────────────────────────────────────────────────────── -->
-  <div class="player hidden" id="player">
+  <!-- ── VIDEO PLAYER ───────────────────────────────────────────────────────── -->
+  <div class="vp-overlay hidden" id="vpOverlay">
 
-    <!-- Hidden extraction iframe -->
-    <!-- created dynamically by player.js -->
+    <video class="vp-video" id="vpVideo" preload="auto" playsinline></video>
 
-    <!-- Native video -->
-    <video id="vid" preload="auto" playsinline></video>
-
-    <!-- Loading overlay -->
-    <div class="player-loading" id="playerLoading">
-      <div class="spinner"></div>
-      <div class="player-loading-msg" id="playerLoadingMsg">Finding stream…</div>
+    <!-- Loading -->
+    <div class="vp-loading" id="vpLoading">
+      <div class="vp-loading-ring"></div>
+      <div class="vp-loading-msg" id="vpLoadingMsg">Finding stream…</div>
+      <div class="vp-loading-sub" id="vpLoadingSub"></div>
     </div>
 
-    <!-- Controls overlay -->
-    <div class="player-controls" id="playerControls">
-      <div class="pc-top">
-        <div class="pc-title" id="pcTitle"></div>
-        <div class="pc-server">
-          <span class="pc-srv-label">Source</span>
-          <div id="pcSrvBtns">
-            <button class="pc-srv-btn active" data-s="0">1</button>
-            <button class="pc-srv-btn" data-s="1">2</button>
+    <!-- Buffering ring -->
+    <div class="vp-buf-ring hidden" id="vpBufRing"></div>
+
+    <!-- Controls -->
+    <div class="vp-controls vp-hidden" id="vpControls">
+
+      <!-- Top bar -->
+      <div class="vp-top">
+        <div class="vp-top-left">
+          <button class="vp-btn vp-back-btn" id="vpBackBtn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <span class="vp-title" id="vpTitle"></span>
+        </div>
+        <div class="vp-top-right">
+          <span class="vp-srv-label">Source</span>
+          <div class="vp-srv-btns" id="vpSrvBtns">
+            <button class="vp-srv-btn active" data-s="0">1</button>
+            <button class="vp-srv-btn" data-s="1">2</button>
           </div>
         </div>
       </div>
-      <div class="pc-bottom">
-        <div class="pc-seek-wrap">
-          <div class="pc-seek-track" id="pcSeekTrack">
-            <div class="pc-seek-fill" id="pcSeekFill"></div>
+
+      <!-- Bottom bar -->
+      <div class="vp-bottom">
+        <div class="vp-seek-wrap" id="vpSeekWrap">
+          <div class="vp-seek-track">
+            <div class="vp-seek-buf"  id="vpSeekBuf"></div>
+            <div class="vp-seek-fill" id="vpSeekFill"></div>
+            <div class="vp-seek-dot"  id="vpSeekDot"></div>
           </div>
         </div>
-        <div class="pc-row">
-          <span class="pc-time" id="pcTime">0:00 / 0:00</span>
+        <div class="vp-btns">
+          <div class="vp-btns-l">
+            <button class="vp-btn" id="vpPlayBtn">
+              <svg id="vpPlayIcon" width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+              <svg id="vpPauseIcon" width="28" height="28" viewBox="0 0 24 24" fill="white" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            </button>
+            <button class="vp-btn hidden" id="vpPrevBtn">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+            </button>
+            <button class="vp-btn vp-skip-btn" id="vpSkipBackBtn">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+              <span class="vp-skip-num">10</span>
+            </button>
+            <button class="vp-btn vp-skip-btn" id="vpSkipFwdBtn">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
+              <span class="vp-skip-num">10</span>
+            </button>
+            <button class="vp-btn hidden" id="vpNextBtn">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 18l8.5-6L6 6v12zm2.5-6 5.5 4V8z M16 6h2v12h-2z"/></svg>
+            </button>
+            <span class="vp-time" id="vpTime">0:00 / 0:00</span>
+          </div>
+          <div class="vp-btns-r">
+            <div class="vp-quality-wrap">
+              <button class="vp-btn vp-quality-btn" id="vpQualityBtn">AUTO</button>
+              <div class="vp-quality-menu hidden" id="vpQualityMenu"></div>
+            </div>
+            <button class="vp-btn vp-ep-list-btn hidden" id="vpEpListBtn">Episodes</button>
+            <button class="vp-btn" id="vpFullBtn">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+            </button>
+          </div>
         </div>
       </div>
+    </div>
+
+    <!-- Episode side panel -->
+    <div class="vp-ep-panel hidden" id="vpEpPanel">
+      <div class="vp-ep-panel-head">
+        <span class="vp-ep-panel-title">Episodes</span>
+        <select class="vp-ep-season-sel" id="vpEpSeasonSel"></select>
+        <button class="vp-btn" id="vpEpPanelClose" style="padding:6px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      <div class="vp-ep-panel-list" id="vpEpPanelList"></div>
     </div>
 
   </div>
