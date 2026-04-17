@@ -215,6 +215,30 @@ body {
 
 .nav-link.active { color: var(--text); border-bottom-color: var(--red); }
 
+/* TV D-pad nav highlight */
+.nav-link.tv-focused,
+.nav-switch-btn.tv-focused {
+  color: var(--text);
+  background: rgba(255,255,255,0.12);
+  border-radius: 4px;
+  outline: 2px solid rgba(255,255,255,0.6);
+  outline-offset: 2px;
+}
+
+.nav-switch-btn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: var(--muted);
+  padding: 7px 18px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.nav-switch-btn:hover { color: var(--text); border-color: var(--text); }
+
 /* ── HERO ──────────────────────────────────────────── */
 
 .hero {
@@ -312,6 +336,13 @@ body {
 
 .btn-play { background: var(--text); color: #000; }
 .btn-info { background: rgba(109,109,110,0.7); color: var(--text); }
+
+/* TV D-pad focused modal button */
+.btn.tv-focused {
+  outline: 3px solid var(--text);
+  outline-offset: 3px;
+  transform: scale(1.04);
+}
 
 /* ── CONTENT ROWS ──────────────────────────────────── */
 

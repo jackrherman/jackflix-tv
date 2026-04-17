@@ -3,8 +3,6 @@
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 
 const PROXY_BASE = 'https://jackflix-proxy.jackrherman.workers.dev'
-const VPS_BASE   = 'http://107.175.245.21'
-const VPS_SECRET = 'jf-rn-2026-xK9mP'
 const JF_SERVER  = 'https://jackflix.onrender.com'
 const JF_PIN     = '5396'
 const TMDB_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI4MjVlMzYzYTM3MDRhZDk5MTZlOTE4NzI3OWJjNjRkYyIsIm5iZiI6MTc3NjI4OTMwMC44MzgsInN1YiI6IjY5ZTAwNjE0OWMzOWYzNTRmODAxMmM0MCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.NSmPuuHTY8KGU4GTN4hz8_PVe9bxnXxmlfi5Ce5Co8A'
@@ -196,7 +194,7 @@ async function tryServer(idx) {
     var episode = currentItem.episode || 1
 
     var qs  = new URLSearchParams({ tmdbId: tmdbId, type: type, season: season, episode: episode })
-    var res = await fetch(VPS_BASE + '/api/resolve?' + qs, { headers: { 'x-jf-secret': VPS_SECRET } })
+    var res = await fetch(JF_SERVER + '/api/resolve?' + qs)
     if (!res.ok) throw new Error('resolve ' + res.status)
     var data = await res.json()
 
@@ -491,7 +489,7 @@ function handlePlayerKey(e) {
   var key = (e.key) || ({37:'ArrowLeft',38:'ArrowUp',39:'ArrowRight',40:'ArrowDown',13:'Enter',27:'Escape'}[e.keyCode] || '')
 
   switch (key) {
-    case 'Escape': case 'GoBack': case 'BrowserBack':
+    case 'Escape':
       e.preventDefault()
       if (_epPanelOpen) { closeEpPanel() } else { closePlayer() }
       break
@@ -529,14 +527,6 @@ function handlePlayerKey(e) {
   }
 }
 
-// webOS back button keyCode
-window.addEventListener('keydown', function(e) {
-  if (document.getElementById('vpOverlay').classList.contains('hidden')) return
-  if (e.keyCode === 461) {
-    e.preventDefault()
-    if (_epPanelOpen) { closeEpPanel() } else { closePlayer() }
-  }
-})
 
 // ── SETUP ─────────────────────────────────────────────────────────────────────
 

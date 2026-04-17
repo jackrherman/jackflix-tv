@@ -3,18 +3,21 @@
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 
 const ROWS = [
-  { title: 'Trending Now',     endpoint: '/trending/all/week',   type: 'mixed'  },
-  { title: 'Popular Movies',   endpoint: '/movie/popular',        type: 'movie'  },
-  { title: 'Popular TV Shows', endpoint: '/tv/popular',           type: 'tv'     },
-  { title: 'Top Rated Movies', endpoint: '/movie/top_rated',      type: 'movie'  },
-  { title: 'Top Rated TV',     endpoint: '/tv/top_rated',         type: 'tv'     },
-  { title: 'Action',           endpoint: '/discover/movie',       type: 'movie',
+  { title: 'Continue Watching',  endpoint: null,                    type: 'cw'     },
+  { title: 'Trending Now',       endpoint: '/trending/all/week',    type: 'mixed'  },
+  { title: 'Popular Movies',     endpoint: '/movie/popular',        type: 'movie'  },
+  { title: 'Popular TV Shows',   endpoint: '/tv/popular',           type: 'tv'     },
+  { title: 'Top Rated Movies',   endpoint: '/movie/top_rated',      type: 'movie'  },
+  { title: 'Top Rated TV',       endpoint: '/tv/top_rated',         type: 'tv'     },
+  { title: 'Action',             endpoint: '/discover/movie',       type: 'movie',
     params: { with_genres: '28',  sort_by: 'popularity.desc' } },
-  { title: 'Sci-Fi',           endpoint: '/discover/movie',       type: 'movie',
+  { title: 'Sci-Fi',             endpoint: '/discover/movie',       type: 'movie',
     params: { with_genres: '878', sort_by: 'popularity.desc' } },
-  { title: 'Crime & Thriller', endpoint: '/discover/movie',       type: 'movie',
+  { title: 'Crime & Thriller',   endpoint: '/discover/movie',       type: 'movie',
     params: { with_genres: '80',  sort_by: 'popularity.desc' } },
 ]
+
+const CONTENT_ROWS = ROWS.filter(function(r) { return r.endpoint !== null })
 
 const AVATAR_COLORS = ['#e50914','#0070f3','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#84cc16']
 
@@ -29,10 +32,14 @@ const mtype     = function(i, rt) { return rt !== 'mixed' ? rt : (i.media_type |
 
 var focusRow     = 0
 var focusCol     = 0
-var rowData      = []
+var rowData      = []   // indexed by content row index (CW row = -1)
 var cwRowData    = []
 var activeFilter = 'all'
-var filteredRows = ROWS.slice()
+var filteredRows = CONTENT_ROWS.slice()
+
+// 'content' or 'nav' — whether D-pad is controlling rows or the top nav bar
+var _browseZone  = 'content'
+var _navFocusIdx = 0   // 0=Home 1=Movies 2=TV 3=SwitchProfile
 
 // ── PROFILE STATE ─────────────────────────────────────────────────────────────
 
@@ -44,19 +51,160 @@ var _pinFocusIdx  = 0
 
 // ── MODAL STATE ───────────────────────────────────────────────────────────────
 
-var _modalItem    = null
-var _modalType    = null
-var _modalFocusEl = null   // which element had focus before modal
-var _modalSeason  = 1
-var _epFocusIdx   = 0
-var _modalFocusArea = 'play'  // 'play' | 'info' | 'episodes' | 'close'
+var _modalItem      = null
+var _modalType      = null
+var _modalSeason    = 1
+var _epFocusIdx     = 0
+var _modalFocusArea = 'play'  // 'play' | 'episodes'
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 
 async function init() {
+  // One-time flush of stale test CW data from localStorage.
+  // Server CW is the source of truth; we'll repopulate from there on login.
+  if (!localStorage.getItem('jf_cw_flushed_v3')) {
+    localStorage.removeItem('cineb_cw')
+    localStorage.removeItem('jf_tv_cw')
+    localStorage.setItem('jf_cw_flushed_v3', '1')
+  }
   setupPlayer()
   setupKeyboard()
   await showProfileScreen()
+}
+
+// ── KEYBOARD ──────────────────────────────────────────────────────────────────
+
+function keyName(e) {
+  if (e.key && e.key !== 'Unidentified') return e.key
+  var m = { 37:'ArrowLeft', 38:'ArrowUp', 39:'ArrowRight', 40:'ArrowDown', 13:'Enter', 27:'Escape', 8:'Backspace' }
+  return m[e.keyCode] || ''
+}
+
+function isBackKey(e) {
+  return e.keyCode === 461 || e.key === 'GoBack' || e.key === 'BrowserBack'
+}
+
+function setupKeyboard() {
+  // Capture phase + stopImmediatePropagation ensures the back button is always
+  // trapped by us before webOS can process it as an app-exit gesture.
+  window.addEventListener('keydown', function(e) {
+    if (isBackKey(e)) {
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      handleBack()
+      return
+    }
+
+    var vpVisible      = !document.getElementById('vpOverlay').classList.contains('hidden')
+    var modalVisible   = !document.getElementById('modalOverlay').classList.contains('hidden')
+    var profileVisible = !document.getElementById('profileScreen').classList.contains('hidden')
+
+    if (vpVisible)      { handlePlayerKey(e); return }
+    if (modalVisible)   { handleModalKey(e);  return }
+    if (profileVisible) { handleProfileKey(e); return }
+    handleBrowseKey(e)
+  }, true)  // true = capture phase
+}
+
+function handleBack() {
+  var vpOverlay     = document.getElementById('vpOverlay')
+  var modalOverlay  = document.getElementById('modalOverlay')
+  var profileScreen = document.getElementById('profileScreen')
+  var pinScreen     = document.getElementById('pinScreen')
+
+  if (!vpOverlay.classList.contains('hidden')) {
+    if (typeof _epPanelOpen !== 'undefined' && _epPanelOpen) { closeEpPanel(); return }
+    closePlayer()
+    return
+  }
+  if (!modalOverlay.classList.contains('hidden')) { closeModal(); return }
+  if (!profileScreen.classList.contains('hidden')) {
+    if (!pinScreen.classList.contains('hidden')) { showProfilePicker(); return }
+    return  // swallow at profile picker
+  }
+  // Browse: if in nav zone, drop back to content; otherwise swallow
+  if (_browseZone === 'nav') { _browseZone = 'content'; updateNavFocus(); return }
+  // Never exit the app
+}
+
+// ── BROWSE NAVIGATION ─────────────────────────────────────────────────────────
+
+function handleBrowseKey(e) {
+  if (_browseZone === 'nav') { handleNavKey(e); return }
+  var key = keyName(e)
+  switch (key) {
+    case 'ArrowDown':
+      e.preventDefault()
+      focus(focusRow + 1, focusCol)
+      break
+    case 'ArrowUp': {
+      e.preventDefault()
+      var topRow = cwRowData.length > 0 ? -1 : 0
+      if (focusRow <= topRow) {
+        _browseZone = 'nav'
+        updateNavFocus()
+      } else {
+        focus(focusRow - 1, focusCol)
+      }
+      break
+    }
+    case 'ArrowRight': e.preventDefault(); focus(focusRow, focusCol + 1); break
+    case 'ArrowLeft':  e.preventDefault(); focus(focusRow, focusCol - 1); break
+    case 'Enter':      e.preventDefault(); selectCard(focusRow, focusCol); break
+  }
+}
+
+function handleNavKey(e) {
+  var key = keyName(e)
+  switch (key) {
+    case 'ArrowLeft':
+      e.preventDefault()
+      _navFocusIdx = Math.max(0, _navFocusIdx - 1)
+      updateNavFocus()
+      break
+    case 'ArrowRight':
+      e.preventDefault()
+      _navFocusIdx = Math.min(3, _navFocusIdx + 1)
+      updateNavFocus()
+      break
+    case 'ArrowDown':
+      e.preventDefault()
+      _browseZone = 'content'
+      updateNavFocus()
+      focus(focusRow, focusCol)
+      break
+    case 'Enter':
+      e.preventDefault()
+      if (_navFocusIdx === 3) {
+        showProfileScreen()
+      } else {
+        var filters = ['all', 'movie', 'tv']
+        applyNavFilter(filters[_navFocusIdx])
+        _browseZone = 'content'
+        updateNavFocus()
+      }
+      break
+  }
+}
+
+function updateNavFocus() {
+  var inNav = (_browseZone === 'nav')
+  document.querySelectorAll('.nav-link').forEach(function(el, i) {
+    el.classList.toggle('tv-focused', inNav && i === _navFocusIdx)
+  })
+  var sw = document.getElementById('navSwitchBtn')
+  if (sw) sw.classList.toggle('tv-focused', inNav && _navFocusIdx === 3)
+}
+
+function applyNavFilter(filter) {
+  activeFilter = filter
+  document.querySelectorAll('.nav-link').forEach(function(t) {
+    t.classList.toggle('active', t.dataset.filter === filter)
+  })
+  filteredRows = filter === 'all'
+    ? CONTENT_ROWS.slice()
+    : CONTENT_ROWS.filter(function(r) { return r.type === filter || r.type === 'mixed' })
+  loadRows()
 }
 
 // ── PROFILE SCREEN ────────────────────────────────────────────────────────────
@@ -79,18 +227,16 @@ async function loadProfiles() {
       if (Array.isArray(data) && data.length) { _profiles = data; return }
     }
   } catch(_) {}
-  // Fallback: hardcoded jack profile so the TV always has someone to log in as
   _profiles = [{ id: 'jack', name: 'Jack', avatar: 0, hasPin: false }]
 }
 
 function showProfilePicker() {
-  // Skip picker entirely if only one profile with no PIN
   if (_profiles.length === 1 && !_profiles[0].hasPin) {
-    loginDirect(_profiles[0])
-    return
+    loginDirect(_profiles[0]); return
   }
   document.getElementById('profilePicker').classList.remove('hidden')
   document.getElementById('pinScreen').classList.add('hidden')
+  _profileFocus = Math.max(0, Math.min(_profiles.length - 1, _profileFocus))
   renderProfileCards()
 }
 
@@ -111,16 +257,12 @@ function renderProfileCards() {
 function profilePickerSelect() {
   var p = _profiles[_profileFocus]
   if (!p) return
-  if (p.hasPin) {
-    showPinScreen(p)
-  } else {
-    loginDirect(p)
-  }
+  if (p.hasPin) { showPinScreen(p) } else { loginDirect(p) }
 }
 
 function loginDirect(p) {
   enterBrowse()
-  getJfToken().catch(function() {})  // auth in background; CW sync happens after
+  getJfToken().catch(function() {})
 }
 
 // ── PIN SCREEN ────────────────────────────────────────────────────────────────
@@ -204,12 +346,52 @@ async function submitPin() {
   }
 }
 
+// ── PROFILE KEY HANDLING ──────────────────────────────────────────────────────
+
+function handleProfileKey(e) {
+  var pinVisible = !document.getElementById('pinScreen').classList.contains('hidden')
+  if (pinVisible) { handlePinKey(e) } else { handlePickerKey(e) }
+}
+
+function handlePickerKey(e) {
+  switch (keyName(e)) {
+    case 'ArrowRight':
+      e.preventDefault()
+      _profileFocus = Math.min(_profiles.length - 1, _profileFocus + 1)
+      renderProfileCards()
+      break
+    case 'ArrowLeft':
+      e.preventDefault()
+      _profileFocus = Math.max(0, _profileFocus - 1)
+      renderProfileCards()
+      break
+    case 'Enter':
+      e.preventDefault()
+      profilePickerSelect()
+      break
+  }
+}
+
+function handlePinKey(e) {
+  var keys = document.querySelectorAll('.pin-key-tv')
+  var cols = 3
+  switch (keyName(e)) {
+    case 'ArrowRight': e.preventDefault(); focusPinKey(Math.min(keys.length - 1, _pinFocusIdx + 1)); break
+    case 'ArrowLeft':  e.preventDefault(); focusPinKey(Math.max(0, _pinFocusIdx - 1)); break
+    case 'ArrowDown':  e.preventDefault(); focusPinKey(Math.min(keys.length - 1, _pinFocusIdx + cols)); break
+    case 'ArrowUp':    e.preventDefault(); if (_pinFocusIdx >= cols) focusPinKey(_pinFocusIdx - cols); break
+    case 'Enter':      e.preventDefault(); if (keys[_pinFocusIdx]) onPinKeyPress(keys[_pinFocusIdx].dataset.k); break
+    case 'Escape':     e.preventDefault(); _pinEntry = ''; showProfilePicker(); break
+  }
+}
+
 // ── ENTER BROWSE ──────────────────────────────────────────────────────────────
 
 async function enterBrowse() {
   document.getElementById('profileScreen').classList.add('hidden')
   document.getElementById('browse').style.visibility = 'visible'
-  filteredRows = ROWS.slice()
+  _browseZone = 'content'
+  filteredRows = CONTENT_ROWS.slice()
   await loadCWFromServer()
   await loadRows()
 }
@@ -242,9 +424,10 @@ function renderRows() {
   var container = document.getElementById('rows')
   container.innerHTML = ''
 
-  var cwEntries = cwRecent()
-  if (cwEntries.length) {
-    container.appendChild(buildCWRow(cwEntries))
+  // CW row (row index -1)
+  cwRowData = cwRecent()
+  if (cwRowData.length) {
+    container.appendChild(buildCWRow(cwRowData))
   }
 
   filteredRows.forEach(function(row, ri) {
@@ -303,8 +486,6 @@ function buildCard(item, ri, ci, rowType) {
 // ── CONTINUE WATCHING ROW ─────────────────────────────────────────────────────
 
 function buildCWRow(entries) {
-  cwRowData = entries
-
   var rowEl = document.createElement('div')
   rowEl.className = 'row'
   rowEl.dataset.row = -1
@@ -333,14 +514,13 @@ function buildCWRow(entries) {
     titleEl2.className = 'card-title'
     titleEl2.textContent = e.title
 
+    overlay.appendChild(titleEl2)
+
     if (e.type === 'tv') {
       var epEl = document.createElement('div')
       epEl.className = 'card-ep'
-      epEl.textContent = 'S' + e.season + 'E' + e.episode
-      overlay.appendChild(titleEl2)
+      epEl.textContent = 'S' + String(e.season || 1).padStart(2,'0') + 'E' + String(e.episode || 1).padStart(2,'0')
       overlay.appendChild(epEl)
-    } else {
-      overlay.appendChild(titleEl2)
     }
 
     var bar = document.createElement('div')
@@ -393,7 +573,7 @@ function focus(row, col) {
   row = Math.max(minRow, Math.min(filteredRows.length - 1, row))
 
   var items = row === -1 ? cwRowData : (rowData[row] || [])
-  col = Math.max(0, Math.min(items.length - 1, col || 0))
+  col = Math.max(0, Math.min((items.length || 1) - 1, col || 0))
 
   focusRow = row
   focusCol = col
@@ -414,10 +594,9 @@ function getCard(row, col) {
 }
 
 function scrollRowToCard(row, col) {
-  var selector = '.row[data-row="' + row + '"] .row-cards'
-  var rowEl    = document.querySelector(selector)
+  var rowEl = document.querySelector('.row[data-row="' + row + '"] .row-cards')
   if (!rowEl) return
-  var cardW   = 220 + 8
+  var cardW   = 228   // 220px card + 8px gap
   var visible = Math.floor(1920 * 0.92 / cardW) - 1
   var offset  = col > visible ? (col - visible) * cardW : 0
   rowEl.style.transform = 'translateX(-' + offset + 'px)'
@@ -427,101 +606,15 @@ function scrollContentToRow(row) {
   var rowsEl = document.getElementById('rows')
   var hasCW  = cwRowData.length > 0
   var domIdx = hasCW ? (row === -1 ? 0 : row + 1) : (row < 0 ? 0 : row)
-  var rowEl  = rowsEl.children[domIdx]
-  if (!rowEl) return
-  var rowH   = rowEl.offsetHeight + 8
-  var shift  = Math.max(0, domIdx * rowH - 40)
+
+  // Sum heights of rows above the target row
+  var top = 0
+  for (var i = 0; i < domIdx; i++) {
+    var el = rowsEl.children[i]
+    if (el) top += el.offsetHeight + 8
+  }
+  var shift = Math.max(0, top - 40)
   rowsEl.style.transform = 'translateY(-' + shift + 'px)'
-}
-
-// ── KEYBOARD / D-PAD ─────────────────────────────────────────────────────────
-
-function keyName(e) {
-  if (e.key) return e.key
-  var m = { 37:'ArrowLeft', 38:'ArrowUp', 39:'ArrowRight', 40:'ArrowDown', 13:'Enter', 27:'Escape' }
-  return m[e.keyCode] || ''
-}
-
-function setupKeyboard() {
-  document.addEventListener('keydown', function(e) {
-    // webOS back key — always prevent default so the app never exits
-    if (e.keyCode === 461) {
-      e.preventDefault()
-      if (!document.getElementById('vpOverlay').classList.contains('hidden')) {
-        return  // player.js handles this
-      }
-      if (!document.getElementById('modalOverlay').classList.contains('hidden')) {
-        closeModal(); return
-      }
-      if (!document.getElementById('pinScreen').classList.contains('hidden')) {
-        showProfilePicker(); return
-      }
-      // In browse or profile picker: swallow the event (don't exit app)
-      return
-    }
-
-    if (!document.getElementById('vpOverlay').classList.contains('hidden')) {
-      handlePlayerKey(e); return
-    }
-    if (!document.getElementById('modalOverlay').classList.contains('hidden')) {
-      handleModalKey(e); return
-    }
-    if (!document.getElementById('profileScreen').classList.contains('hidden')) {
-      handleProfileKey(e); return
-    }
-    handleBrowseKey(e)
-  })
-}
-
-function handleProfileKey(e) {
-  var pinVisible = !document.getElementById('pinScreen').classList.contains('hidden')
-  if (pinVisible) {
-    handlePinKey(e)
-  } else {
-    handlePickerKey(e)
-  }
-}
-
-function handlePickerKey(e) {
-  switch (keyName(e)) {
-    case 'ArrowRight':
-      e.preventDefault()
-      _profileFocus = Math.min(_profiles.length - 1, _profileFocus + 1)
-      renderProfileCards()
-      break
-    case 'ArrowLeft':
-      e.preventDefault()
-      _profileFocus = Math.max(0, _profileFocus - 1)
-      renderProfileCards()
-      break
-    case 'Enter':
-      e.preventDefault()
-      profilePickerSelect()
-      break
-  }
-}
-
-function handlePinKey(e) {
-  var keys = document.querySelectorAll('.pin-key-tv')
-  var cols = 3
-  switch (keyName(e)) {
-    case 'ArrowRight': e.preventDefault(); focusPinKey(Math.min(keys.length - 1, _pinFocusIdx + 1)); break
-    case 'ArrowLeft':  e.preventDefault(); focusPinKey(Math.max(0, _pinFocusIdx - 1)); break
-    case 'ArrowDown':  e.preventDefault(); focusPinKey(Math.min(keys.length - 1, _pinFocusIdx + cols)); break
-    case 'ArrowUp':    e.preventDefault(); if (_pinFocusIdx >= cols) focusPinKey(_pinFocusIdx - cols); break
-    case 'Enter':      e.preventDefault(); if (keys[_pinFocusIdx]) onPinKeyPress(keys[_pinFocusIdx].dataset.k); break
-    case 'Escape':     e.preventDefault(); _pinEntry = ''; showProfilePicker(); break
-  }
-}
-
-function handleBrowseKey(e) {
-  switch (keyName(e)) {
-    case 'ArrowDown':  e.preventDefault(); focus(focusRow + 1, focusCol); break
-    case 'ArrowUp':    e.preventDefault(); focus(focusRow - 1, focusCol); break
-    case 'ArrowRight': e.preventDefault(); focus(focusRow, focusCol + 1); break
-    case 'ArrowLeft':  e.preventDefault(); focus(focusRow, focusCol - 1); break
-    case 'Enter':      e.preventDefault(); selectCard(focusRow, focusCol); break
-  }
 }
 
 // ── SELECT CARD ───────────────────────────────────────────────────────────────
@@ -530,7 +623,7 @@ function selectCard(row, col) {
   if (row === -1) {
     var e = cwRowData[col]
     if (!e) return
-    openPlayer({ title: e.title, tmdbId: e.tmdbId, type: e.type, season: e.season, episode: e.episode, resumeFrom: e.position })
+    openPlayer({ title: e.title, tmdbId: e.tmdbId, type: e.type, season: e.season, episode: e.episode, resumeFrom: e.position, posterPath: e.posterPath })
     return
   }
   var item = rowData[row] && rowData[row][col]
@@ -542,23 +635,21 @@ function selectCard(row, col) {
 // ── MODAL ─────────────────────────────────────────────────────────────────────
 
 async function openModal(item, type) {
-  _modalItem       = item
-  _modalType       = type
-  _modalFocusArea  = 'play'
-  _epFocusIdx      = 0
+  _modalItem      = item
+  _modalType      = type
+  _modalFocusArea = 'play'
+  _epFocusIdx     = 0
 
   var overlay = document.getElementById('modalOverlay')
   overlay.classList.remove('hidden')
 
-  // Backdrop
   var bd = document.getElementById('modalBackdrop')
   bd.src = bdUrl(item.backdrop_path) || posterUrl(item.poster_path, 'w780')
   bd.alt = ttitle(item)
 
-  document.getElementById('modalTitle').textContent = ttitle(item)
+  document.getElementById('modalTitle').textContent    = ttitle(item)
   document.getElementById('modalOverview').textContent = item.overview || ''
 
-  // Meta
   var metaEl = document.getElementById('modalMeta')
   metaEl.innerHTML = ''
   if (item.vote_average) {
@@ -572,7 +663,6 @@ async function openModal(item, type) {
     metaEl.appendChild(yearEl)
   }
 
-  // Actions
   var actionsEl = document.getElementById('modalActions')
   actionsEl.innerHTML = ''
 
@@ -591,15 +681,27 @@ async function openModal(item, type) {
     watchBtn.className = 'btn btn-play'
     watchBtn.id = 'modalPlayBtn'
     watchBtn.innerHTML = '&#9654; Watch'
-    watchBtn.addEventListener('click', function() { _modalFocusArea = 'episodes' })
+    watchBtn.addEventListener('click', function() {
+      // Play S01E01 directly
+      closeModal()
+      openPlayer({
+        title:      ttitle(item) + ' \u00b7 S01E01',
+        tmdbId:     item.id,
+        type:       'tv',
+        season:     1,
+        episode:    1,
+        posterPath: item.poster_path,
+      })
+    })
     actionsEl.appendChild(watchBtn)
   }
 
-  // Side info from TMDB details
   var sideEl = document.getElementById('modalSide')
   sideEl.innerHTML = ''
-
   document.getElementById('episodesSection').classList.add('hidden')
+
+  // Focus the play button
+  updateModalFocus()
 
   try {
     var ep   = type === 'tv' ? '/tv/' + item.id : '/movie/' + item.id
@@ -658,7 +760,6 @@ async function loadModalEpisodes(showId, seasonNum) {
     var el = document.createElement('div')
     el.className  = 'episode-card'
     el.dataset.ep = idx
-    el.tabIndex   = 0
 
     var thumbWrap = document.createElement('div')
     thumbWrap.className = 'episode-thumb-wrap'
@@ -666,7 +767,7 @@ async function loadModalEpisodes(showId, seasonNum) {
     img.src = ep.still_path ? (IMG + '/w300' + ep.still_path) : ''
     img.alt = ep.name
     var playIcon = document.createElement('div')
-    playIcon.className  = 'episode-play-icon'
+    playIcon.className   = 'episode-play-icon'
     playIcon.textContent = '▶'
     thumbWrap.appendChild(img)
     thumbWrap.appendChild(playIcon)
@@ -689,24 +790,30 @@ async function loadModalEpisodes(showId, seasonNum) {
     el.addEventListener('click', function() {
       closeModal()
       openPlayer({
-        title:   ttitle(show) + ' \u00b7 S' + String(seasonNum).padStart(2,'0') + 'E' + String(ep.episode_number).padStart(2,'0'),
-        tmdbId:  showId,
-        type:    'tv',
-        season:  seasonNum,
-        episode: ep.episode_number,
+        title:      ttitle(show) + ' \u00b7 S' + String(seasonNum).padStart(2,'0') + 'E' + String(ep.episode_number).padStart(2,'0'),
+        tmdbId:     showId,
+        type:       'tv',
+        season:     seasonNum,
+        episode:    ep.episode_number,
         posterPath: show.poster_path,
       })
     })
   })
 
-  updateEpFocus()
+  if (_modalFocusArea === 'episodes') updateModalFocus()
 }
 
-function updateEpFocus() {
+function updateModalFocus() {
+  var pb = document.getElementById('modalPlayBtn')
+  if (pb) pb.classList.toggle('tv-focused', _modalFocusArea === 'play')
+
   var cards = document.querySelectorAll('.episode-card')
-  cards.forEach(function(c, i) { c.classList.toggle('focused', i === _epFocusIdx) })
-  var focused = cards[_epFocusIdx]
-  if (focused) focused.scrollIntoView({ block: 'nearest' })
+  cards.forEach(function(c, i) {
+    c.classList.toggle('focused', _modalFocusArea === 'episodes' && i === _epFocusIdx)
+  })
+  if (_modalFocusArea === 'episodes' && cards[_epFocusIdx]) {
+    cards[_epFocusIdx].scrollIntoView({ block: 'nearest' })
+  }
 }
 
 function closeModal() {
@@ -715,33 +822,30 @@ function closeModal() {
 }
 
 function handleModalKey(e) {
-  switch (keyName(e)) {
-    case 'Escape': case 'GoBack': case 'BrowserBack':
+  var key = keyName(e)
+  switch (key) {
+    case 'Escape':
       e.preventDefault()
       closeModal()
       break
     case 'ArrowDown': {
       e.preventDefault()
       var cards = document.querySelectorAll('.episode-card')
-      if (cards.length && _modalFocusArea === 'episodes') {
-        _epFocusIdx = Math.min(cards.length - 1, _epFocusIdx + 1)
-        updateEpFocus()
-      } else if (_modalFocusArea === 'play' && cards.length) {
-        _modalFocusArea = 'episodes'
-        updateEpFocus()
+      if (_modalFocusArea === 'play') {
+        if (cards.length) { _modalFocusArea = 'episodes'; _epFocusIdx = 0; updateModalFocus() }
+      } else {
+        if (_epFocusIdx < cards.length - 1) { _epFocusIdx++; updateModalFocus() }
       }
       break
     }
     case 'ArrowUp': {
       e.preventDefault()
-      if (_modalFocusArea === 'episodes' && _epFocusIdx > 0) {
-        _epFocusIdx--
-        updateEpFocus()
-      } else if (_modalFocusArea === 'episodes' && _epFocusIdx === 0) {
-        _modalFocusArea = 'play'
-        document.querySelectorAll('.episode-card').forEach(function(c) { c.classList.remove('focused') })
-        var pb = document.getElementById('modalPlayBtn')
-        if (pb) pb.focus()
+      if (_modalFocusArea === 'episodes') {
+        if (_epFocusIdx > 0) {
+          _epFocusIdx--; updateModalFocus()
+        } else {
+          _modalFocusArea = 'play'; updateModalFocus()
+        }
       }
       break
     }
@@ -750,9 +854,9 @@ function handleModalKey(e) {
       if (_modalFocusArea === 'play') {
         var pb = document.getElementById('modalPlayBtn')
         if (pb) pb.click()
-      } else if (_modalFocusArea === 'episodes') {
-        var cards = document.querySelectorAll('.episode-card')
-        if (cards[_epFocusIdx]) cards[_epFocusIdx].click()
+      } else {
+        var eCards = document.querySelectorAll('.episode-card')
+        if (eCards[_epFocusIdx]) eCards[_epFocusIdx].click()
       }
       break
     }
@@ -760,20 +864,16 @@ function handleModalKey(e) {
   }
 }
 
-// ── NAV TABS ──────────────────────────────────────────────────────────────────
+// ── NAV TABS (click) ──────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.nav-link').forEach(function(tab) {
     tab.addEventListener('click', function() {
-      activeFilter = tab.dataset.filter
-      document.querySelectorAll('.nav-link').forEach(function(t) { t.classList.remove('active') })
-      tab.classList.add('active')
-      filteredRows = activeFilter === 'all'
-        ? ROWS.slice()
-        : ROWS.filter(function(r) { return r.type === activeFilter || r.type === 'mixed' })
-      loadRows()
+      applyNavFilter(tab.dataset.filter)
     })
   })
+  var sw = document.getElementById('navSwitchBtn')
+  if (sw) sw.addEventListener('click', showProfileScreen)
 })
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
