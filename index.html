@@ -8,72 +8,71 @@
 </head>
 <body>
 
-  <!-- ── PROFILE SCREEN ───────────────────────────────────────────────────── -->
+  <!-- ── PROFILE SCREEN ─────────────────────────────────────────────────── -->
   <div id="profileScreen" class="profile-screen">
-    <div class="profile-screen-logo">JACKFLIX</div>
+    <div class="profile-logo">JACKFLIX</div>
 
-    <!-- Who's watching picker -->
-    <div id="profilePicker" class="profile-picker-tv">
-      <h1 class="profile-heading-tv">Who's watching?</h1>
-      <div id="profileCards" class="profile-cards-tv"></div>
-      <div class="profile-manage-row">
-        <button id="manageBtn" class="profile-manage-btn">Manage Profiles</button>
-      </div>
+    <div id="profilePicker" class="profile-picker hidden">
+      <h1 class="profile-heading">Who's watching?</h1>
+      <div id="profileCards" class="profile-cards"></div>
     </div>
 
-    <!-- PIN entry -->
-    <div id="pinScreen" class="pin-screen-tv hidden">
-      <p id="pinFor" class="pin-for-tv"></p>
-      <div class="pin-dots-tv">
-        <div class="pin-dot-tv"></div>
-        <div class="pin-dot-tv"></div>
-        <div class="pin-dot-tv"></div>
-        <div class="pin-dot-tv"></div>
+    <div id="pinScreen" class="pin-screen hidden">
+      <p id="pinFor" class="pin-for"></p>
+      <div class="pin-dots" id="pinDots">
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
       </div>
-      <p id="pinError" class="pin-error-tv hidden">Incorrect PIN</p>
-      <div id="pinKeypad" class="pin-keypad-tv"></div>
+      <p id="pinError" class="pin-error hidden">Incorrect PIN. Try again.</p>
+      <div id="pinKeypad" class="pin-keypad"></div>
+    </div>
+
+    <div class="profile-loading" id="profileLoading">
+      <div class="profile-loading-ring"></div>
     </div>
   </div>
 
-  <!-- ── BROWSE ────────────────────────────────────────────────────────────── -->
-  <div id="browse" style="visibility:hidden">
+  <!-- ── BROWSE ──────────────────────────────────────────────────────────── -->
+  <div id="browse" class="browse hidden">
 
-    <!-- Nav (fixed, always on top) -->
+    <!-- Nav -->
     <nav class="nav" id="nav">
-      <span class="nav-logo">JACKFLIX</span>
-      <ul class="nav-links" id="navLinks">
-        <li class="nav-link active" data-filter="all">Home</li>
-        <li class="nav-link" data-filter="movie">Movies</li>
-        <li class="nav-link" data-filter="tv">TV Shows</li>
-      </ul>
-      <button class="nav-switch-btn" id="navSwitchBtn">Switch Profile</button>
+      <div class="nav-left">
+        <span class="nav-logo">JACKFLIX</span>
+        <ul class="nav-links" id="navLinks">
+          <li class="nav-link active" data-filter="all">Home</li>
+          <li class="nav-link" data-filter="movie">Movies</li>
+          <li class="nav-link" data-filter="tv">TV Shows</li>
+        </ul>
+      </div>
+      <div class="nav-right">
+        <button class="nav-switch-btn" id="navSwitchBtn">Switch Profile</button>
+      </div>
     </nav>
 
-    <div class="browse-wrap">
-      <!-- Hero -->
-      <div class="hero">
-        <div class="hero-backdrop" id="heroBg"></div>
-        <div class="hero-vignette"></div>
-        <div class="hero-content">
-          <div class="hero-title"    id="heroTitle"></div>
-          <div class="hero-overview" id="heroOverview"></div>
-          <div class="hero-meta"     id="heroMeta"></div>
-        </div>
-      </div>
+    <!-- Hero (full-screen backdrop) -->
+    <div class="hero-backdrop" id="heroBg"></div>
+    <div class="hero-vignette"></div>
+    <div class="hero-text">
+      <div class="hero-badge" id="heroBadge"></div>
+      <h1 class="hero-title" id="heroTitle"></h1>
+      <p class="hero-overview" id="heroOverview"></p>
+      <div class="hero-meta" id="heroMeta"></div>
+    </div>
 
-      <!-- Content rows -->
-      <div class="content" id="content">
-        <div id="rows"></div>
-      </div>
+    <!-- Content rows -->
+    <div class="content" id="content">
+      <div id="rows"></div>
     </div>
 
   </div>
 
-  <!-- ── MODAL OVERLAY ─────────────────────────────────────────────────────── -->
+  <!-- ── MODAL ───────────────────────────────────────────────────────────── -->
   <div class="modal-overlay hidden" id="modalOverlay">
     <div class="modal" id="modal">
       <button class="modal-close" id="modalClose">&#10005;</button>
-
       <div class="modal-hero">
         <img class="modal-backdrop" id="modalBackdrop" src="" alt="">
         <div class="modal-hero-vignette"></div>
@@ -82,14 +81,11 @@
           <div class="modal-actions" id="modalActions"></div>
         </div>
       </div>
-
       <div class="modal-body">
-        <div class="modal-meta" id="modalMeta"></div>
         <div class="modal-cols">
           <div>
+            <div class="modal-meta" id="modalMeta"></div>
             <div class="modal-overview" id="modalOverview"></div>
-
-            <!-- TV episodes section -->
             <div class="episodes-section hidden" id="episodesSection">
               <div class="episodes-header">
                 <div class="episodes-heading">Episodes</div>
@@ -104,29 +100,25 @@
     </div>
   </div>
 
-  <!-- ── VIDEO PLAYER ───────────────────────────────────────────────────────── -->
+  <!-- ── VIDEO PLAYER ────────────────────────────────────────────────────── -->
   <div class="vp-overlay hidden" id="vpOverlay">
 
     <video class="vp-video" id="vpVideo" preload="auto" playsinline></video>
 
-    <!-- Loading -->
     <div class="vp-loading" id="vpLoading">
       <div class="vp-loading-ring"></div>
       <div class="vp-loading-msg" id="vpLoadingMsg">Finding stream…</div>
       <div class="vp-loading-sub" id="vpLoadingSub"></div>
     </div>
 
-    <!-- Buffering ring -->
     <div class="vp-buf-ring hidden" id="vpBufRing"></div>
 
-    <!-- Controls -->
     <div class="vp-controls vp-hidden" id="vpControls">
 
-      <!-- Top bar -->
       <div class="vp-top">
         <div class="vp-top-left">
-          <button class="vp-btn vp-back-btn" id="vpBackBtn">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          <button class="vp-btn" id="vpBackBtn">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
           </button>
           <span class="vp-title" id="vpTitle"></span>
         </div>
@@ -139,34 +131,33 @@
         </div>
       </div>
 
-      <!-- Bottom bar -->
       <div class="vp-bottom">
         <div class="vp-seek-wrap" id="vpSeekWrap">
           <div class="vp-seek-track">
-            <div class="vp-seek-buf"  id="vpSeekBuf"></div>
+            <div class="vp-seek-buf" id="vpSeekBuf"></div>
             <div class="vp-seek-fill" id="vpSeekFill"></div>
-            <div class="vp-seek-dot"  id="vpSeekDot"></div>
+            <div class="vp-seek-dot" id="vpSeekDot"></div>
           </div>
         </div>
         <div class="vp-btns">
           <div class="vp-btns-l">
             <button class="vp-btn" id="vpPlayBtn">
-              <svg id="vpPlayIcon" width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
-              <svg id="vpPauseIcon" width="28" height="28" viewBox="0 0 24 24" fill="white" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              <svg id="vpPlayIcon" width="32" height="32" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+              <svg id="vpPauseIcon" width="32" height="32" viewBox="0 0 24 24" fill="white" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
             </button>
             <button class="vp-btn hidden" id="vpPrevBtn">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
             </button>
             <button class="vp-btn vp-skip-btn" id="vpSkipBackBtn">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
               <span class="vp-skip-num">10</span>
             </button>
             <button class="vp-btn vp-skip-btn" id="vpSkipFwdBtn">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
               <span class="vp-skip-num">10</span>
             </button>
             <button class="vp-btn hidden" id="vpNextBtn">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 18l8.5-6L6 6v12zm2.5-6 5.5 4V8z M16 6h2v12h-2z"/></svg>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M6 18l8.5-6L6 6v12zm2.5-6 5.5 4V8z M16 6h2v12h-2z"/></svg>
             </button>
             <span class="vp-time" id="vpTime">0:00 / 0:00</span>
           </div>
@@ -177,7 +168,7 @@
             </div>
             <button class="vp-btn vp-ep-list-btn hidden" id="vpEpListBtn">Episodes</button>
             <button class="vp-btn" id="vpFullBtn">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
             </button>
           </div>
         </div>
@@ -189,8 +180,8 @@
       <div class="vp-ep-panel-head">
         <span class="vp-ep-panel-title">Episodes</span>
         <select class="vp-ep-season-sel" id="vpEpSeasonSel"></select>
-        <button class="vp-btn" id="vpEpPanelClose" style="padding:6px">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        <button class="vp-btn" id="vpEpPanelClose" style="padding:8px">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
         </button>
       </div>
       <div class="vp-ep-panel-list" id="vpEpPanelList"></div>

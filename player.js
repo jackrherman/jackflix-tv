@@ -21,6 +21,37 @@ function tmdb(ep, p) {
   return fetch(url.toString(), { headers: { Authorization: 'Bearer ' + TMDB_TOKEN } }).then(function(r) { return r.json() })
 }
 
+// ── IMAGE & DATA HELPERS ──────────────────────────────────────────────────────
+
+function posterUrl(path, size) {
+  if (!path) return ''
+  return IMG + '/' + (size || 'w342') + path
+}
+
+function bdUrl(path, size) {
+  if (!path) return ''
+  return IMG + '/' + (size || 'w1280') + path
+}
+
+function ttitle(item) {
+  return item.title || item.name || ''
+}
+
+function year(item) {
+  var d = item.release_date || item.first_air_date || ''
+  return d ? d.slice(0, 4) : ''
+}
+
+function stars(item) {
+  if (!item || !item.vote_average) return ''
+  return (Math.round(item.vote_average * 10) / 10) + ' \u2605'
+}
+
+function mtype(item, rowType) {
+  if (rowType && rowType !== 'mixed') return rowType
+  return item.media_type || (item.title ? 'movie' : 'tv')
+}
+
 // ── CONTINUE WATCHING ─────────────────────────────────────────────────────────
 
 var CW_KEY = 'cineb_cw'
