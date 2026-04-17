@@ -479,9 +479,10 @@ async function loadEpPanel(seasonNum) {
 // ── PLAYER REMOTE CONTROL ─────────────────────────────────────────────────────
 
 function handlePlayerKey(e) {
-  var v = document.getElementById('vpVideo')
+  var v   = document.getElementById('vpVideo')
+  var key = (e.key) || ({37:'ArrowLeft',38:'ArrowUp',39:'ArrowRight',40:'ArrowDown',13:'Enter',27:'Escape'}[e.keyCode] || '')
 
-  switch (e.key) {
+  switch (key) {
     case 'Escape': case 'GoBack': case 'BrowserBack':
       e.preventDefault()
       if (_epPanelOpen) { closeEpPanel() } else { closePlayer() }

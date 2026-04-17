@@ -84,6 +84,11 @@ async function loadProfiles() {
 }
 
 function showProfilePicker() {
+  // Skip picker entirely if only one profile with no PIN
+  if (_profiles.length === 1 && !_profiles[0].hasPin) {
+    loginDirect(_profiles[0])
+    return
+  }
   document.getElementById('profilePicker').classList.remove('hidden')
   document.getElementById('pinScreen').classList.add('hidden')
   renderProfileCards()
@@ -435,23 +440,40 @@ function scrollRowToCard(row, col) {
 }
 
 function scrollContentToRow(row) {
-  var content = document.getElementById('content')
-  var rowsEl  = document.getElementById('rows')
-  var hasCW   = cwRowData.length > 0
-  var domIdx  = hasCW ? (row === -1 ? 0 : row + 1) : row
-  var rowEl   = rowsEl.children[domIdx]
+  var rowsEl = document.getElementById('rows')
+  var hasCW  = cwRowData.length > 0
+  var domIdx = hasCW ? (row === -1 ? 0 : row + 1) : (row < 0 ? 0 : row)
+  var rowEl  = rowsEl.children[domIdx]
   if (!rowEl) return
-  var rowH    = rowEl.offsetHeight + 8
-  var offset  = domIdx * rowH
-  var maxShow = 1080 - 500
-  var shift   = Math.max(0, offset - maxShow / 2)
+  var rowH   = rowEl.offsetHeight + 8
+  var shift  = Math.max(0, domIdx * rowH - 40)
   rowsEl.style.transform = 'translateY(-' + shift + 'px)'
 }
 
 // ── KEYBOARD / D-PAD ─────────────────────────────────────────────────────────
 
+function keyName(e) {
+  if (e.key) return e.key
+  var m = { 37:'ArrowLeft', 38:'ArrowUp', 39:'ArrowRight', 40:'ArrowDown', 13:'Enter', 27:'Escape' }
+  return m[e.keyCode] || ''
+}
+
 function setupKeyboard() {
   document.addEventListener('keydown', function(e) {
+    // webOS back key — handled here for non-player screens
+    if (e.keyCode === 461) {
+      if (!document.getElementById('vpOverlay').classList.contains('hidden')) {
+        return  // player.js handles this
+      }
+      if (!document.getElementById('modalOverlay').classList.contains('hidden')) {
+        closeModal(); e.preventDefault(); return
+      }
+      if (!document.getElementById('pinScreen').classList.contains('hidden')) {
+        showProfilePicker(); e.preventDefault(); return
+      }
+      return
+    }
+
     if (!document.getElementById('vpOverlay').classList.contains('hidden')) {
       handlePlayerKey(e); return
     }
@@ -462,20 +484,6 @@ function setupKeyboard() {
       handleProfileKey(e); return
     }
     handleBrowseKey(e)
-  })
-
-  document.addEventListener('keydown', function(e) {
-    if (e.keyCode === 461) {
-      if (!document.getElementById('vpOverlay').classList.contains('hidden')) {
-        closePlayer(); e.preventDefault()
-      } else if (!document.getElementById('modalOverlay').classList.contains('hidden')) {
-        closeModal(); e.preventDefault()
-      } else if (!document.getElementById('profileScreen').classList.contains('hidden')) {
-        if (!document.getElementById('pinScreen').classList.contains('hidden')) {
-          showProfilePicker(); e.preventDefault()
-        }
-      }
-    }
   })
 }
 
@@ -489,7 +497,7 @@ function handleProfileKey(e) {
 }
 
 function handlePickerKey(e) {
-  switch (e.key) {
+  switch (keyName(e)) {
     case 'ArrowRight':
       e.preventDefault()
       _profileFocus = Math.min(_profiles.length - 1, _profileFocus + 1)
@@ -510,24 +518,23 @@ function handlePickerKey(e) {
 function handlePinKey(e) {
   var keys = document.querySelectorAll('.pin-key-tv')
   var cols = 3
-  switch (e.key) {
+  switch (keyName(e)) {
     case 'ArrowRight': e.preventDefault(); focusPinKey(Math.min(keys.length - 1, _pinFocusIdx + 1)); break
     case 'ArrowLeft':  e.preventDefault(); focusPinKey(Math.max(0, _pinFocusIdx - 1)); break
     case 'ArrowDown':  e.preventDefault(); focusPinKey(Math.min(keys.length - 1, _pinFocusIdx + cols)); break
     case 'ArrowUp':    e.preventDefault(); if (_pinFocusIdx >= cols) focusPinKey(_pinFocusIdx - cols); break
     case 'Enter':      e.preventDefault(); if (keys[_pinFocusIdx]) onPinKeyPress(keys[_pinFocusIdx].dataset.k); break
-    case 'Escape': case 'GoBack': case 'BrowserBack': e.preventDefault(); _pinEntry = ''; showProfilePicker(); break
+    case 'Escape':     e.preventDefault(); _pinEntry = ''; showProfilePicker(); break
   }
 }
 
 function handleBrowseKey(e) {
-  switch (e.key) {
+  switch (keyName(e)) {
     case 'ArrowDown':  e.preventDefault(); focus(focusRow + 1, focusCol); break
     case 'ArrowUp':    e.preventDefault(); focus(focusRow - 1, focusCol); break
     case 'ArrowRight': e.preventDefault(); focus(focusRow, focusCol + 1); break
     case 'ArrowLeft':  e.preventDefault(); focus(focusRow, focusCol - 1); break
     case 'Enter':      e.preventDefault(); selectCard(focusRow, focusCol); break
-    case 'Escape': case 'BrowserBack': case 'GoBack': window.close(); break
   }
 }
 
@@ -722,7 +729,7 @@ function closeModal() {
 }
 
 function handleModalKey(e) {
-  switch (e.key) {
+  switch (keyName(e)) {
     case 'Escape': case 'GoBack': case 'BrowserBack':
       e.preventDefault()
       closeModal()

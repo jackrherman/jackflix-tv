@@ -186,11 +186,8 @@ body {
   gap: 40px;
   padding: 0 4%;
   height: var(--nav-h);
-  background: linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, transparent 100%);
-  transition: background 0.4s ease;
+  background: var(--bg);
 }
-
-.nav.solid { background: var(--bg); }
 
 .nav-logo {
   font-size: 32px;
@@ -222,11 +219,10 @@ body {
 
 .hero {
   position: relative;
-  height: 90vh;
-  min-height: 500px;
+  height: 560px;
   display: flex;
   align-items: flex-end;
-  padding-bottom: 80px;
+  padding-bottom: 60px;
   padding-left: 4%;
 }
 
@@ -323,13 +319,17 @@ body {
   position: relative;
   z-index: 1;
   padding: 0 0 60px;
-  margin-top: -60px;
-  transition: transform 0.3s ease;
+  margin-top: -160px;
+}
+
+.browse-wrap {
+  padding-top: var(--nav-h);
 }
 
 .row {
   margin-bottom: 8px;
   padding: 0 4%;
+  overflow: visible;
 }
 
 .row-title {
@@ -341,7 +341,7 @@ body {
 .row-cards {
   display: flex;
   gap: 8px;
-  overflow: hidden;
+  overflow: visible;
   padding-bottom: 8px;
   transition: transform 0.3s ease;
 }
