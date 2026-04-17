@@ -3,6 +3,8 @@
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 
 const PROXY_BASE = 'https://jackflix-proxy.jackrherman.workers.dev'
+const VPS_BASE   = 'http://107.175.245.21'
+const VPS_SECRET = 'jf-rn-2026-xK9mP'
 const JF_SERVER  = 'https://jackflix.onrender.com'
 const JF_PIN     = '5396'
 const TMDB_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI4MjVlMzYzYTM3MDRhZDk5MTZlOTE4NzI3OWJjNjRkYyIsIm5iZiI6MTc3NjI4OTMwMC44MzgsInN1YiI6IjY5ZTAwNjE0OWMzOWYzNTRmODAxMmM0MCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.NSmPuuHTY8KGU4GTN4hz8_PVe9bxnXxmlfi5Ce5Co8A'
@@ -24,6 +26,12 @@ function tmdb(ep, p) {
 // ── CONTINUE WATCHING ─────────────────────────────────────────────────────────
 
 var CW_KEY = 'cineb_cw'
+
+// Clear any legacy test data from the old TV app key
+;(function() {
+  var OLD_KEY = 'jf_tv_cw'
+  if (localStorage.getItem(OLD_KEY)) { localStorage.removeItem(OLD_KEY) }
+})()
 
 function cwKey(p) {
   return p.type === 'movie' ? 'm_' + p.tmdbId : 't_' + p.tmdbId + '_' + p.season + '_' + p.episode
@@ -188,7 +196,7 @@ async function tryServer(idx) {
     var episode = currentItem.episode || 1
 
     var qs  = new URLSearchParams({ tmdbId: tmdbId, type: type, season: season, episode: episode })
-    var res = await fetch(PROXY_BASE + '/api/resolve?' + qs)
+    var res = await fetch(VPS_BASE + '/api/resolve?' + qs, { headers: { 'x-jf-secret': VPS_SECRET } })
     if (!res.ok) throw new Error('resolve ' + res.status)
     var data = await res.json()
 
