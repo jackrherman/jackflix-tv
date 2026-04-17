@@ -118,25 +118,9 @@ function profilePickerSelect() {
   }
 }
 
-async function loginDirect(p) {
-  var tok = await getJfToken()
-  if (tok) {
-    enterBrowse()
-    return
-  }
-  try {
-    var r = await fetch(JF_SERVER + '/api/auth', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ profileId: p.id }),
-    })
-    if (r.ok) {
-      var data = await r.json()
-      localStorage.setItem('jf_tv_token', data.token)
-      serverToken = data.token
-    }
-  } catch(_) {}
+function loginDirect(p) {
   enterBrowse()
+  getJfToken().catch(function() {})  // auth in background; CW sync happens after
 }
 
 // ── PIN SCREEN ────────────────────────────────────────────────────────────────
@@ -460,17 +444,19 @@ function keyName(e) {
 
 function setupKeyboard() {
   document.addEventListener('keydown', function(e) {
-    // webOS back key — handled here for non-player screens
+    // webOS back key — always prevent default so the app never exits
     if (e.keyCode === 461) {
+      e.preventDefault()
       if (!document.getElementById('vpOverlay').classList.contains('hidden')) {
         return  // player.js handles this
       }
       if (!document.getElementById('modalOverlay').classList.contains('hidden')) {
-        closeModal(); e.preventDefault(); return
+        closeModal(); return
       }
       if (!document.getElementById('pinScreen').classList.contains('hidden')) {
-        showProfilePicker(); e.preventDefault(); return
+        showProfilePicker(); return
       }
+      // In browse or profile picker: swallow the event (don't exit app)
       return
     }
 
